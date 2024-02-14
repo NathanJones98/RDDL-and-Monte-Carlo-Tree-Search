@@ -1,0 +1,29 @@
+Explain the rationale behind the enhancements you make for Q2(b) and Q2(c) and cite any papers you have consulted in this file.
+Also, summarize your final choice of selection and backpropogation strategies for the competitive portion in (d).  
+
+(b) Your selection strategy
+	The selection strategy I chose was to use the default selection strategy given. The reason I decided to stick with
+	the current selection strategy was because I could not determine a way to better select the paths. For my algorithm,
+	it would benefit greatly from having the best paths picked for each MCTS iteration - but unfortunately my research did 
+	not reveal a better selection strategy (that I was able to implement) than the default. 
+	
+(c) Your backpropagation strategy
+	The strategy I used for backpropagation was the Couetoux MCTS backup algorithm [1]. I chose this algorithm primarily
+	because I was short on time for the lab (this algorithm being the second easiest suggested in lecture). This algorithm
+	is a slight modification on the default backpropagation algorithm, the key difference being that instead of looking at
+	the reward value on a node by node basis, we are summing the reward of path. This is more accurate than the base model
+	as we are able to look at probable paths as a whole and not just look at singular node values (that could be outliers).
+
+(d) Your overall strategy
+	My overall strategy was to just learn as much as possible with regards to the material. I may have not implemented one 
+	of the harder algorithms (and I pay for with with my avg reward amount), but felt I learned a lot. With regards to the AI
+	I did not really have a strategy, as the AI I implemented was suboptimal. I ended up with a respectable -154. I selected 
+	the backprop. algorithm as I felt that I had a better grasp on it than the others (obviously) and with the limited amount 
+	of time I had, it was the best option. I chose the default selection algo, I chose this as I was not able to find a algo
+	that was more optimal for finding better paths (that I would be able to implement).
+	
+	
+[References]
+
+[1]	Couetoux, A. 2013. Monte Carlo Tree Search for Continuous and Stochastic Sequential Decision MakingProblems. 
+	Theses, Universit ́eParis Sud -Paris XI, https: //tel.archives-ouvertes.fr/tel-00927252

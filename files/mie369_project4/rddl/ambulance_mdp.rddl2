@@ -1,0 +1,141 @@
+domain ambulance_mdp {
+	
+	requirements = {
+		reward-deterministic,
+		constrained-state
+	};
+	
+	types {
+		ambulance : object;
+		xpos : object;
+		ypos : object;
+	};
+	
+	pvariables {
+		/////////////////////////////////////////////////////////////
+		//////////////////////// non-fluents ////////////////////////
+		/////////////////////////////////////////////////////////////
+		
+		// Penalties
+		NON_ANSWERED_PENALTY 		: {non-fluent, real, default = 0};
+		ON_THE_WAY_PENALTY 			: {non-fluent, real, default = 0};
+		
+		// Location-dependent probability of the arrival of emergency calls 
+		CALL_PROB(xpos, ypos)		: {non-fluent, real, default = 0};			
+		
+		// Locations of hospitals are fixed 
+		HOSPITAL(xpos, ypos) 		: {non-fluent, bool, default = false};  		// each grid point can either be a hospital or not
+		
+		// Defines relationships of x and y positions (should be specified in your rddl instance specification) 
+		// For example, 'EAST(x1, x2) = true' means 'x1' is located at the eastern side of 'x2'
+		NORTH(ypos, ypos) 	: {non-fluent, bool, default = false};
+		SOUTH(ypos, ypos) 	: {non-fluent, bool, default = false};
+		EAST(xpos, xpos) 	: {non-fluent, bool, default = false};
+		WEST(xpos, xpos) 	: {non-fluent, bool, default = false};
+	
+	
+		/////////////////////////////////////////////////////////////
+		//////////////////////// state-fluents //////////////////////
+		/////////////////////////////////////////////////////////////
+		
+		activeCallAt(xpos, ypos) 			: {state-fluent, bool, default = false};	// an emergency call is pending at location
+		patientOn(ambulance)				: {state-fluent, bool, default = false};
+		ambulanceAt(ambulance, xpos, ypos)	: {state-fluent, bool, default = false}; 
+		
+		/////////////////////////////////////////////////////////////
+		//////////////////////// action-fluents /////////////////////
+		/////////////////////////////////////////////////////////////
+		
+		moveEast(ambulance) 	: {action-fluent, bool, default = false};
+		moveWest(ambulance) 	: {action-fluent, bool, default = false};
+		moveNorth(ambulance) 	: {action-fluent, bool, default = false};
+		moveSouth(ambulance) 	: {action-fluent, bool, default = false};
+		pickPatient(ambulance) 	: {action-fluent, bool, default = false}; // returns true if ambulance is attempting to pickup a patient
+		noop					: {action-fluent, bool, default = false};	// taking no action
+	};
+	
+	
+	///////////////////////////////////////////////////////////////////////////////////
+	//////////////////////// Conditional probability functions ////////////////////////
+	///////////////////////////////////////////////////////////////////////////////////
+	
+	cpfs {		
+		////// TODO: Write the CPFs
+		
+		activeCallAt'(?x, ?y) = 
+		
+		if (activeCallAt(?x, ?y) ^ ~exists_{?a : ambulance} [ambulanceAt(?a, ?x, ?y) ^ pickPatient(?a) ^ ~patientOn(?a)])
+			
+			then KronDelta(true) 
+			
+		else Bernoulli(CALL_PROB(?x, ?y));
+		 			
+		
+		patientOn'(?a) = if (patientOn(?a) ^ 
+		~exists_{?x: xpos, ?y: ypos} [HOSPITAL(?x, ?y) ^ ambulanceAt(?a, ?x, ?y)])
+		
+			then KronDelta(true) 
+		
+		else if (exists_{?x: xpos, ?y: ypos} [ambulanceAt(?a, ?x, ?y) ^ pickPatient(?a) ^ activeCallAt(?x, ?y)])	
+		
+			then KronDelta(true)
+		
+		else KronDelta(false);
+		
+		ambulanceAt'(?a, ?x, ?y) = if ((pickPatient(?a) | noop) ^ ambulanceAt(?a, ?x, ?y))
+		
+			then KronDelta(true)
+			
+		else if (moveNorth(?a) ^ (exists_{?y_0 : ypos} [ambulanceAt(?a, ?x, ?y_0) ^ NORTH(?y, ?y_0)]) |
+		(ambulanceAt(?a, ?x, ?y) ^ forall_{?y_1 : ypos} [~NORTH(?y_1, ?y)]))
+		
+			then KronDelta(true)
+			
+		else if (moveEast(?a) ^ (exists_{?x_0 : xpos} [ambulanceAt(?a, ?x_0, ?y) ^ EAST(?x, ?x_0)]) | 
+		(ambulanceAt(?a, ?x, ?y) ^ forall_{?x_1 : xpos} [~EAST(?x_1, ?x)]))
+		
+			then KronDelta(true)
+		
+		else if (moveSouth(?a) ^ (exists_{?y_0 : ypos} [ambulanceAt(?a, ?x, ?y_0) ^ SOUTH(?y, ?y_0)]) | 
+		(ambulanceAt(?a, ?x, ?y) ^ forall_{?y_1 : ypos} [~SOUTH(?y_1, ?y)]))
+		
+			then KronDelta(true)
+		
+		else if (moveWest(?a) ^ (exists_{?x_0 : xpos} [ambulanceAt(?a, ?x_0, ?y) ^ WEST(?x, ?x_0)]) | 
+		(ambulanceAt(?a, ?x, ?y) ^ forall_{?x_1 : xpos} [~WEST(?x_1, ?x)]))
+		
+			then KronDelta(true)
+		
+		else KronDelta(false);	
+		
+	 };
+	
+	/////////////////////////////////////////////////////////
+	//////////////////////// Rewards ////////////////////////
+	/////////////////////////////////////////////////////////
+		
+	////// TODO: Define the reward here
+	 
+	// Note: you should specify the values of necessary non-fluents in your instance file  
+	reward = [sum_{?x: xpos, ?y: ypos} [NON_ANSWERED_PENALTY * activeCallAt(?x, ?y)]] 
+	+ [sum_{?a : ambulance} [ON_THE_WAY_PENALTY * patientOn(?a)]];
+	
+	
+	
+	////////////////////////////////////////////////////////////////////////
+	//////////////////////// Constraints on states  ////////////////////////
+	////////////////////////////////////////////////////////////////////////	
+	
+	state-invariants {
+		// EAST, WEST, NORTH, SOUTH defined properly (unique and symmetric)
+		forall_{?x: xpos} [(sum_{?x2 : xpos} WEST(?x,?x2)) <= 1];
+		forall_{?x: xpos} [(sum_{?x2 : xpos} EAST(?x,?x2)) <= 1];
+		forall_{?y: ypos} [(sum_{?y2 : ypos} NORTH(?y,?y2)) <= 1];
+		forall_{?y: ypos} [(sum_{?y2 : ypos} SOUTH(?y,?y2)) <= 1];
+		forall_{?x : xpos, ?x2 : xpos} [ EAST(?x,?x2) <=> WEST(?x2,?x) ];
+		forall_{?y : ypos, ?y2 : ypos} [ SOUTH(?y,?y2) <=> NORTH(?y2,?y) ];
+		
+		// Ambulance cannot disappear from the map and can only exist at one location at a time
+		forall_{?a : ambulance} (sum_{?x : xpos, ?y : ypos} ambulanceAt(?a, ?x, ?y)) == 1;		
+	};	
+}
